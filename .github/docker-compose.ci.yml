@@ -13,8 +13,8 @@ services:
 
   api:
     build:
-      context: ..              # 👈 go up to repo root
-      dockerfile: ../Dockerfile  # 👈 Dockerfile in repo root
+      context: ..              
+      dockerfile: Dockerfile 
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/calcdb
     depends_on:
