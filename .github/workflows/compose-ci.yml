@@ -1,0 +1,43 @@
+name: Docker Compose CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Bring up CI stack (no host ports), wait for healthchecks
+      - name: Compose up (CI file only)
+        run: docker compose -f .github/docker-compose.ci.yml up -d --build --wait
+
+      - name: Show container status
+        run: docker compose -f .github/docker-compose.ci.yml ps
+
+      - name: Check Postgres ready
+        run: docker compose -f .github/docker-compose.ci.yml exec -T db pg_isready -U postgres -d calcdb
+
+      # Optional: curl the API /health if available
+      - name: Hit API /health
+        run: |
+          docker compose -f .github/docker-compose.ci.yml exec -T api \
+            sh -lc "apk add --no-cache curl >/dev/null 2>&1 || true; curl -sf http://localhost:8000/health || curl -sf http://127.0.0.1:8000/health || true"
+
+      - name: Tail API logs (last 120 lines)
+        if: always()
+        run: docker compose -f .github/docker-compose.ci.yml logs --tail=120 api
+
+      - name: Compose down
+        if: always()
+        run: docker compose -f .github/docker-compose.ci.yml down -v --remove-orphans
