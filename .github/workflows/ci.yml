@@ -1,4 +1,5 @@
 name: CI/CD
+
 on:
   push:
     branches: [ "main" ]
@@ -14,14 +15,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Build the image (smoke test your Dockerfile)
+      # ----- Build the app image (smoke test Dockerfile) -----
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build image
         run: docker build -t app-image:ci -f Dockerfile .
 
-      # Optional: quick Python import check (no DB, no tests)
+      # ----- Quick Python import check (main.app) -----
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -47,21 +48,22 @@ jobs:
           print("✅ main.app present")
           PY
 
-      # Deploy to Docker Hub on main only (optional: keep or remove)
+      # ----- Deploy to Docker Hub on main ONLY (and only if secrets exist) -----
       - name: Log in to Docker Hub
-        if: github.ref == 'refs/heads/main'
+        if: ${{ github.ref == 'refs/heads/main' && secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_TOKEN }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build & push image
-        if: github.ref == 'refs/heads/main'
+        if: ${{ github.ref == 'refs/heads/main' && secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_TOKEN }}
         uses: docker/build-push-action@v5
         with:
+          context: .
           push: true
           tags: |
-            kaw393939/601_module9:latest
-            kaw393939/601_module9:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi_sql:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi_sql:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
           cache-to: type=inline,mode=max
