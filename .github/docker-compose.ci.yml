@@ -13,17 +13,16 @@ services:
 
   api:
     build:
-      context: .             # 👈 build from repo root (where Dockerfile is)
-      dockerfile: Dockerfile
+      context: ..              # 👈 go up to repo root
+      dockerfile: ../Dockerfile  # 👈 Dockerfile in repo root
     environment:
-      # Adjust to match your app’s expected DSN format
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/calcdb
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      # Option A: if you have /health route (recommended)
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      # Use a tiny Python probe (no wget/curl dependency)
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request,sys\ntry:\n  urllib.request.urlopen('http://localhost:8000/health', timeout=2)\n  sys.exit(0)\nexcept Exception:\n  sys.exit(1)\nPY"]
       interval: 5s
       timeout: 3s
       retries: 10
