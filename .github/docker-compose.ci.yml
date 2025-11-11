@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: calcdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d calcdb || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .             # 👈 build from repo root (where Dockerfile is)
+      dockerfile: Dockerfile
+    environment:
+      # Adjust to match your app’s expected DSN format
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/calcdb
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # Option A: if you have /health route (recommended)
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:8.13
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      db:
+        condition: service_healthy
